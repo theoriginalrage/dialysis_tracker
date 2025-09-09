@@ -1,0 +1,77 @@
+name: Release on tag
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get version from tag
+        id: vars
+        shell: bash
+        run: |
+          RAW="${GITHUB_REF#refs/tags/}"
+          echo "tag=$RAW" >> $GITHUB_OUTPUT
+          echo "version=${RAW#v}" >> $GITHUB_OUTPUT
+
+      - name: Extract changelog section
+        shell: bash
+        run: |
+          ver="${{ steps.vars.outputs.version }}"
+          awk -v ver="$ver" '
+            BEGIN{found=0}
+            /^## \[.*\]/{ 
+              if(found) exit;
+              if($0 ~ "\\["ver"\\]") {found=1; next}
+            }
+            found{print}
+          ' CHANGELOG.md > RELEASE_NOTES.md || true
+
+          if [ ! -s RELEASE_NOTES.md ]; then
+            echo "No changelog section found for ${ver}. See CHANGELOG.md." > RELEASE_NOTES.md
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.vars.outputs.tag }}
+          name: Dialysis Tracker ${{ steps.vars.outputs.tag }}
+          body_path: RELEASE_NOTES.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Optional: build and attach a debug Android APK to the release.
+  # Uncomment this job AND add `needs: release` to it if you want the APK attached after release.
+  # build-android:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v4
+  #     - name: Set up Java
+  #       uses: actions/setup-java@v4
+  #       with:
+  #         distribution: temurin
+  #         java-version: '17'
+  #     - name: Install Flutter
+  #       uses: subosito/flutter-action@v2
+  #       with:
+  #         channel: 'stable'
+  #     - name: Flutter pub get
+  #       run: flutter pub get
+  #     - name: Build debug APK (no signing required)
+  #       run: flutter build apk --debug
+  #     - name: Upload APK to release
+  #       uses: softprops/action-gh-release@v2
+  #       with:
+  #         files: build/app/outputs/flutter-apk/app-debug.apk
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
