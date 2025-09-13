@@ -13,15 +13,22 @@ class TrendsScreen extends StatelessWidget {
     final store = context.watch<SessionStore>();
     final sessions = store.sessions;
 
-    List<FlSpot> _spotsPreWeight() => List.generate(
-          sessions.length,
-          (i) => FlSpot((sessions.length - i).toDouble(), sessions[i].preWeight),
-        );
+    List<FlSpot> _spotsPreWeight() {
+      final data = sessions.where((s) => s.preWeight != null).toList();
+      return List.generate(
+        data.length,
+        (i) =>
+            FlSpot((data.length - i).toDouble(), data[i].preWeight!),
+      );
+    }
 
-    List<FlSpot> _spotsBP() => List.generate(
-          sessions.length,
-          (i) => FlSpot((sessions.length - i).toDouble(), sessions[i].preBP),
-        );
+    List<FlSpot> _spotsBP() {
+      final data = sessions.where((s) => s.preBP != null).toList();
+      return List.generate(
+        data.length,
+        (i) => FlSpot((data.length - i).toDouble(), data[i].preBP!),
+      );
+    }
 
     Widget _chart(String title, List<FlSpot> spots) {
       if (spots.isEmpty) {
