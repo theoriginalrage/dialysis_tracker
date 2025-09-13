@@ -11,7 +11,7 @@ void main() {
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => SessionStore()),
+        ChangeNotifierProvider(create: (_) => SessionStore()..load()),
         ChangeNotifierProvider(create: (_) => SettingsStore()..load()),
       ],
       child: const DialysisApp(),

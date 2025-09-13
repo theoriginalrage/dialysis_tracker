@@ -13,7 +13,6 @@ class TodayScreen extends StatefulWidget {
 }
 
 class _TodayScreenState extends State<TodayScreen> {
-  final _form = GlobalKey<FormState>();
   final _preWeight = TextEditingController();
   final _preBP = TextEditingController();
   final _postBP = TextEditingController();
@@ -34,134 +33,111 @@ class _TodayScreenState extends State<TodayScreen> {
         border: OutlineInputBorder(),
       ).copyWith(labelText: label);
 
-  String? _num(String? v) {
-    if (v == null || v.trim().isEmpty) return 'Required';
-    final n = double.tryParse(v);
-    if (n == null) return 'Enter a number';
-    return null;
-  }
-
-  void _save() {
-    if (!_form.currentState!.validate()) return;
-
-    final s = Session(
-      date: DateTime.now(),
-      preWeight: double.parse(_preWeight.text),
-      preBP: double.parse(_preBP.text),
-      postBP: double.parse(_postBP.text),
-      postWeight: double.parse(_postWeight.text),
-      notes: _notes.text.trim().isEmpty ? null : _notes.text.trim(),
-    );
-
-    context.read<SessionStore>().add(s);
-
-    final fluid = s.fluidRemoved.toStringAsFixed(2);
-    final color = switch (s.status) {
-      'green' => Colors.green,
-      'yellow' => Colors.amber,
-      _ => Colors.red,
-    };
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(Icons.circle, color: color, size: 14),
-            const SizedBox(width: 8),
-            Text('Saved. Fluid removed: $fluid kg'),
-          ],
-        ),
-        duration: const Duration(seconds: 2),
+  Widget _row(
+      {required String label,
+      required TextEditingController ctrl,
+      TextInputType? kb,
+      required VoidCallback onSave,
+      int maxLines = 1}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        crossAxisAlignment: maxLines > 1 ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: TextField(
+              controller: ctrl,
+              keyboardType: kb,
+              decoration: _dec(label),
+              maxLines: maxLines,
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.check),
+            onPressed: () {
+              onSave();
+              ctrl.clear();
+              ScaffoldMessenger.of(context)
+                  .showSnackBar(const SnackBar(content: Text('Saved')));
+            },
+          )
+        ],
       ),
     );
+  }
 
-    _form.currentState!.reset();
-    _preWeight.clear();
-    _preBP.clear();
-    _postBP.clear();
-    _postWeight.clear();
-    _notes.clear();
+  DateTime get _today => DateTime.now();
+
+  void _savePreWeight() {
+    final v = double.tryParse(_preWeight.text);
+    if (v == null) return;
+    context.read<SessionStore>().upsertPartial(Session(
+          date: _today,
+          preWeight: v,
+          preWeightAt: DateTime.now(),
+        ));
+  }
+
+  void _savePreBP() {
+    final v = double.tryParse(_preBP.text);
+    if (v == null) return;
+    context.read<SessionStore>().upsertPartial(Session(
+          date: _today,
+          preBP: v,
+          preBPAt: DateTime.now(),
+        ));
+  }
+
+  void _savePostBP() {
+    final v = double.tryParse(_postBP.text);
+    if (v == null) return;
+    context.read<SessionStore>().upsertPartial(Session(
+          date: _today,
+          postBP: v,
+          postBPAt: DateTime.now(),
+        ));
+  }
+
+  void _savePostWeight() {
+    final v = double.tryParse(_postWeight.text);
+    if (v == null) return;
+    context.read<SessionStore>().upsertPartial(Session(
+          date: _today,
+          postWeight: v,
+          postWeightAt: DateTime.now(),
+        ));
+  }
+
+  void _saveNotes() {
+    final text = _notes.text.trim();
+    context.read<SessionStore>().upsertPartial(Session(
+          date: _today,
+          notes: text.isEmpty ? null : text,
+          notesAt: DateTime.now(),
+        ));
   }
 
   @override
   Widget build(BuildContext context) {
-    final pad = const EdgeInsets.symmetric(horizontal: 16, vertical: 8);
     final kb = const TextInputType.numberWithOptions(decimal: true);
-
     return Scaffold(
       appBar: AppBar(title: const Text("Today's Session")),
       body: Column(
         children: [
           const CalendarHeader(),
           Expanded(
-            child: Form(
-              key: _form,
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  Padding(
-                    padding: pad,
-                    child: TextFormField(
-                      controller: _preWeight,
-                      keyboardType: kb,
-                      decoration: _dec('Pre-Weight (kg)'),
-                      validator: _num,
-                    ),
-                  ),
-                  Padding(
-                    padding: pad,
-                    child: TextFormField(
-                      controller: _preBP,
-                      keyboardType: kb,
-                      decoration: _dec('Pre BP (sitting, systolic)'),
-                      validator: _num,
-                    ),
-                  ),
-                  Padding(
-                    padding: pad,
-                    child: TextFormField(
-                      controller: _postBP,
-                      keyboardType: kb,
-                      decoration: _dec('Post BP (sitting, systolic)'),
-                      validator: _num,
-                    ),
-                  ),
-                  Padding(
-                    padding: pad,
-                    child: TextFormField(
-                      controller: _postWeight,
-                      keyboardType: kb,
-                      decoration: _dec('Post-Weight (kg)'),
-                      validator: _num,
-                    ),
-                  ),
-                  Padding(
-                    padding: pad,
-                    child: TextFormField(
-                      controller: _notes,
-                      decoration: _dec('Notes (optional)'),
-                      maxLines: 3,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Padding(
-                    padding: pad,
-                    child: FilledButton(
-                      onPressed: _save,
-                      child: const Padding(
-                        padding: EdgeInsets.all(14.0),
-                        child:
-                            Text('Save Session', style: TextStyle(fontSize: 18)),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+            child: ListView(
+              children: [
+                _row(label: 'Pre-Weight (kg)', ctrl: _preWeight, kb: kb, onSave: _savePreWeight),
+                _row(label: 'Pre BP (systolic)', ctrl: _preBP, kb: kb, onSave: _savePreBP),
+                _row(label: 'Post BP (systolic)', ctrl: _postBP, kb: kb, onSave: _savePostBP),
+                _row(label: 'Post-Weight (kg)', ctrl: _postWeight, kb: kb, onSave: _savePostWeight),
+                _row(label: 'Notes (optional)', ctrl: _notes, onSave: _saveNotes, maxLines: 3),
+              ],
             ),
-          ),
+          )
         ],
       ),
     );
   }
 }
-

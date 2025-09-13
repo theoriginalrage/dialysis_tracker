@@ -10,7 +10,21 @@ class AppDb {
     if (_db != null) return _db!;
     final dir = await getApplicationDocumentsDirectory();
     final path = join(dir.path, 'dialysis.db');
+    // Log DB open so it's visible in logcat
+    // ignore: avoid_print
+    print('AppDb: opening database at ' + path);
     _db = await openDatabase(path, version: 1, onCreate: _onCreate);
+    // Ensure sessions table exists for upgrades
+    await _db!.execute('''
+      CREATE TABLE IF NOT EXISTS sessions(
+        date TEXT PRIMARY KEY,
+        preWeight REAL, preWeightAt TEXT,
+        preBP REAL, preBPAt TEXT,
+        postBP REAL, postBPAt TEXT,
+        postWeight REAL, postWeightAt TEXT,
+        notes TEXT, notesAt TEXT
+      );
+    ''');
     return _db!;
   }
 
@@ -64,6 +78,17 @@ class AppDb {
       CREATE TABLE dose_log(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         medId INTEGER, timestamp TEXT, taken INTEGER
+      );
+    ''');
+
+    await db.execute('''
+      CREATE TABLE sessions(
+        date TEXT PRIMARY KEY,
+        preWeight REAL, preWeightAt TEXT,
+        preBP REAL, preBPAt TEXT,
+        postBP REAL, postBPAt TEXT,
+        postWeight REAL, postWeightAt TEXT,
+        notes TEXT, notesAt TEXT
       );
     ''');
   }

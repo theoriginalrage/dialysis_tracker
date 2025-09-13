@@ -8,10 +8,11 @@ import 'widgets/calendar_header.dart';
 class HistoryScreen extends StatelessWidget {
   const HistoryScreen({super.key});
 
-  Color _dot(String status) => switch (status) {
+  Color _dot(String? status) => switch (status) {
         'green' => Colors.green,
         'yellow' => Colors.amber,
-        _ => Colors.red,
+        'red' => Colors.red,
+        _ => Colors.grey,
       };
 
   @override
@@ -38,7 +39,7 @@ class HistoryScreen extends StatelessWidget {
 
 class _SessionTile extends StatefulWidget {
   final Session s;
-  final Color Function(String) colorOf;
+  final Color Function(String?) colorOf;
   const _SessionTile({required this.s, required this.colorOf});
 
   @override
@@ -51,7 +52,9 @@ class _SessionTileState extends State<_SessionTile> {
   @override
   Widget build(BuildContext context) {
     final s = widget.s;
-    final fluid = s.fluidRemoved.toStringAsFixed(2);
+    final fluid = s.fluidRemoved != null
+        ? s.fluidRemoved!.toStringAsFixed(2)
+        : '—';
     final d = '${s.date.year}-${s.date.month.toString().padLeft(2, '0')}-'
         '${s.date.day.toString().padLeft(2, '0')}';
 
@@ -80,10 +83,10 @@ class _SessionTileState extends State<_SessionTile> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Pre-Weight: ${s.preWeight} kg'),
-                      Text('Post-Weight: ${s.postWeight} kg'),
-                      Text('Pre BP: ${s.preBP}'),
-                      Text('Post BP: ${s.postBP}'),
+                      Text('Pre-Weight: ${s.preWeight ?? '—'} kg'),
+                      Text('Post-Weight: ${s.postWeight ?? '—'} kg'),
+                      Text('Pre BP: ${s.preBP ?? '—'}'),
+                      Text('Post BP: ${s.postBP ?? '—'}'),
                       if (s.notes != null && s.notes!.isNotEmpty)
                         Padding(
                           padding: const EdgeInsets.only(top: 6),
