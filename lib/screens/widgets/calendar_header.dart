@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
+
 import '../../state/session_store.dart';
 import '../../state/settings_store.dart';
 
@@ -17,17 +18,13 @@ class _CalendarHeaderState extends State<CalendarHeader> {
   @override
   Widget build(BuildContext context) {
     final sessions = context.watch<SessionStore>().sessions;
-    final profile = context.watch<SettingsStore>().profile;
+    context.watch<SettingsStore>();
 
-    // Sessions per day
     final Map<DateTime, int> sessionCount = {};
     for (final s in sessions) {
       final d = DateTime(s.date.year, s.date.month, s.date.day);
       sessionCount[d] = (sessionCount[d] ?? 0) + 1;
     }
-
-    bool isDialysisWeekday(DateTime d) =>
-        profile?.dialysisWeekdays.contains(d.weekday) ?? false;
 
     return TableCalendar(
       firstDay: DateTime.utc(2022, 1, 1),
@@ -40,10 +37,8 @@ class _CalendarHeaderState extends State<CalendarHeader> {
         markerBuilder: (context, day, events) {
           final dd = DateTime(day.year, day.month, day.day);
           final hasSession = sessionCount.containsKey(dd);
-          final isDialysisDay = isDialysisWeekday(day);
-          if (!hasSession && !isDialysisDay) return null;
+          if (!hasSession) return null;
 
-          // session dot = filled; dialysis day (no session) = hollow
           return Align(
             alignment: Alignment.bottomCenter,
             child: Padding(
@@ -51,7 +46,7 @@ class _CalendarHeaderState extends State<CalendarHeader> {
               child: Icon(
                 Icons.circle,
                 size: 6,
-                color: hasSession ? Colors.teal : Colors.teal.withOpacity(0.35),
+                color: Theme.of(context).colorScheme.primary,
               ),
             ),
           );
@@ -61,4 +56,3 @@ class _CalendarHeaderState extends State<CalendarHeader> {
     );
   }
 }
-

@@ -1,24 +1,39 @@
-class Profile {
-  final String name;
-  final List<int> dialysisWeekdays; // 1=Mon … 7=Sun (DateTime.monday..sunday)
-  final String units; // 'kg' for now; future: lbs, etc.
+enum WeightUnit { kg, lb }
 
-  const Profile({
-    required this.name,
-    required this.dialysisWeekdays,
-    this.units = 'kg',
-  });
+extension WeightUnitLabel on WeightUnit {
+  String get storageKey => this == WeightUnit.lb ? 'lb' : 'kg';
 
-  Map<String, dynamic> toJson() => {
-        'name': name,
-        'days': dialysisWeekdays,
-        'units': units,
-      };
-
-  factory Profile.fromJson(Map<String, dynamic> j) => Profile(
-        name: j['name'] ?? '',
-        dialysisWeekdays: (j['days'] as List).cast<int>(),
-        units: j['units'] ?? 'kg',
-      );
+  String get displayLabel => this == WeightUnit.lb ? 'lbs' : 'kg';
 }
 
+WeightUnit weightUnitFromStorage(String? value) {
+  return value == 'lb' ? WeightUnit.lb : WeightUnit.kg;
+}
+
+class UserProfile {
+  final String name;
+  final String? photoPath;
+  final double startWeight;
+  final WeightUnit unit;
+
+  const UserProfile({
+    required this.name,
+    required this.startWeight,
+    required this.unit,
+    this.photoPath,
+  });
+
+  UserProfile copyWith({
+    String? name,
+    String? photoPath,
+    double? startWeight,
+    WeightUnit? unit,
+  }) {
+    return UserProfile(
+      name: name ?? this.name,
+      photoPath: photoPath ?? this.photoPath,
+      startWeight: startWeight ?? this.startWeight,
+      unit: unit ?? this.unit,
+    );
+  }
+}
