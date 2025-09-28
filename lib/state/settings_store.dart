@@ -6,14 +6,17 @@ import '../models/profile.dart';
 class SettingsStore extends ChangeNotifier {
   static const _kOnboarded = 'onboarded';
   static const _kProfile = 'profile';
+  static const _kDarkMode = 'darkMode';
 
   bool _loaded = false;          // 👈 NEW
   bool _onboarded = false;
   Profile? _profile;
+  bool _darkMode = false;
 
   bool get loaded => _loaded;    // 👈 NEW
   bool get onboarded => _onboarded;
   Profile? get profile => _profile;
+  bool get darkMode => _darkMode;
 
   Future<void> load() async {
     final sp = await SharedPreferences.getInstance();
@@ -22,6 +25,7 @@ class SettingsStore extends ChangeNotifier {
     if (p != null) {
       _profile = Profile.fromJson(jsonDecode(p));
     }
+    _darkMode = sp.getBool(_kDarkMode) ?? false;
     _loaded = true;              // 👈 mark done
     notifyListeners();
   }
@@ -33,6 +37,13 @@ class SettingsStore extends ChangeNotifier {
     _profile = p;
     _onboarded = true;
     _loaded = true;
+    notifyListeners();
+  }
+
+  Future<void> setDarkMode(bool enabled) async {
+    final sp = await SharedPreferences.getInstance();
+    await sp.setBool(_kDarkMode, enabled);
+    _darkMode = enabled;
     notifyListeners();
   }
 }

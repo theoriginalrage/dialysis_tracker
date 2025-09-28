@@ -6,6 +6,7 @@ import 'screens/today_screen.dart';
 import 'screens/history_screen.dart';
 import 'screens/trends_screen.dart';
 import 'screens/setup_screen.dart';
+import 'screens/settings_screen.dart';
 
 void main() {
   runApp(
@@ -24,12 +25,22 @@ class DialysisApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final settings = context.watch<SettingsStore>();
+
     return MaterialApp(
       title: 'Dialysis Tracker',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
         useMaterial3: true,
       ),
+      darkTheme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.teal,
+          brightness: Brightness.dark,
+        ),
+        useMaterial3: true,
+      ),
+      themeMode: settings.darkMode ? ThemeMode.dark : ThemeMode.light,
       home: const _Gate(),
     );
   }
@@ -67,6 +78,7 @@ class _RootState extends State<_Root> {
     TodayScreen(),
     HistoryScreen(),
     TrendsScreen(),
+    SettingsScreen(),
   ];
 
   @override
@@ -80,6 +92,7 @@ class _RootState extends State<_Root> {
           NavigationDestination(icon: Icon(Icons.home), label: 'Today'),
           NavigationDestination(icon: Icon(Icons.list_alt), label: 'History'),
           NavigationDestination(icon: Icon(Icons.show_chart), label: 'Trends'),
+          NavigationDestination(icon: Icon(Icons.settings), label: 'Settings'),
         ],
       ),
     );
