@@ -1,14 +1,90 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../models/session.dart';
 import '../services/unit_service.dart';
 import '../state/session_store.dart';
 import '../utils/weight_utils.dart';
-import 'widgets/calendar_header.dart';
+import 'widgets/calendar_tray.dart';
 
-class HistoryScreen extends StatelessWidget {
+class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
+
+  @override
+  State<HistoryScreen> createState() => _HistoryScreenState();
+}
+
+class _HistoryScreenState extends State<HistoryScreen> {
+  final _trayKey = GlobalKey<CalendarTrayState>();
+  late DateTime _selectedDate;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedDate = _normalize(DateTime.now());
+  }
+
+  DateTime _normalize(DateTime date) => DateTime(date.year, date.month, date.day);
+
+  bool _sameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
+  @override
+  Widget build(BuildContext context) {
+    final sessions = context.watch<SessionStore>().sessions;
+    final filtered = sessions
+        .where((s) => _sameDay(s.date, _selectedDate))
+        .toList();
+    final selectionLabel = DateFormat('EEE, MMM d, y').format(_selectedDate);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('History'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.calendar_month),
+            tooltip: 'Toggle calendar',
+            onPressed: () => _trayKey.currentState?.toggle(),
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          CalendarTray(
+            key: _trayKey,
+            focusedDate: _selectedDate,
+            onDateSelected: (date) {
+              setState(() {
+                _selectedDate = _normalize(date);
+              });
+            },
+            rangeMode: false,
+            titleWhenCollapsed: selectionLabel,
+            prefsKey: 'ui.tray.history',
+          ),
+          Expanded(
+            child: filtered.isEmpty
+                ? ListView(
+                    children: const [
+                      Padding(
+                        padding: EdgeInsets.all(24),
+                        child: Center(
+                          child: Text('No sessions recorded for this day'),
+                        ),
+                      ),
+                    ],
+                  )
+                : ListView.builder(
+                    itemCount: filtered.length,
+                    itemBuilder: (_, i) =>
+                        _SessionTile(s: filtered[i], colorOf: _dot),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
 
   Color _dot(String? status) => switch (status) {
         'green' => Colors.green,
@@ -16,27 +92,6 @@ class HistoryScreen extends StatelessWidget {
         'red' => Colors.red,
         _ => Colors.grey,
       };
-
-  @override
-  Widget build(BuildContext context) {
-    final sessions = context.watch<SessionStore>().sessions;
-
-    return Scaffold(
-      appBar: AppBar(title: const Text('History')),
-      body: Column(
-        children: [
-          const CalendarHeader(),
-          Expanded(
-            child: ListView.builder(
-              itemCount: sessions.length,
-              itemBuilder: (_, i) =>
-                  _SessionTile(s: sessions[i], colorOf: _dot),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _SessionTile extends StatefulWidget {
@@ -116,4 +171,3 @@ class _SessionTileState extends State<_SessionTile> {
     );
   }
 }
-
