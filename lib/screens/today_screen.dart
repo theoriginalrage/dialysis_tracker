@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../models/session.dart';
 import '../services/unit_service.dart';
 import '../state/session_store.dart';
 import '../utils/weight_utils.dart';
-import 'widgets/calendar_header.dart';
+import 'widgets/calendar_tray.dart';
 
 class TodayScreen extends StatefulWidget {
   const TodayScreen({super.key});
@@ -20,12 +21,16 @@ class _TodayScreenState extends State<TodayScreen> {
   final _postBP = TextEditingController();
   final _postWeight = TextEditingController();
   final _notes = TextEditingController();
+  final _trayKey = GlobalKey<CalendarTrayState>();
+
   WeightUnit _unit = UnitService.instance.unit.value;
+  late DateTime _selectedDate;
 
   @override
   void initState() {
     super.initState();
     UnitService.instance.unit.addListener(_handleUnitChange);
+    _selectedDate = _normalize(DateTime.now());
   }
 
   @override
@@ -38,6 +43,8 @@ class _TodayScreenState extends State<TodayScreen> {
     _notes.dispose();
     super.dispose();
   }
+
+  DateTime _normalize(DateTime date) => DateTime(date.year, date.month, date.day);
 
   InputDecoration _dec(String label) => const InputDecoration(
         border: OutlineInputBorder(),
@@ -78,16 +85,18 @@ class _TodayScreenState extends State<TodayScreen> {
     });
   }
 
-  Widget _row(
-      {required String label,
-      required TextEditingController ctrl,
-      TextInputType? kb,
-      required VoidCallback onSave,
-      int maxLines = 1}) {
+  Widget _row({
+    required String label,
+    required TextEditingController ctrl,
+    TextInputType? kb,
+    required VoidCallback onSave,
+    int maxLines = 1,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
-        crossAxisAlignment: maxLines > 1 ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+        crossAxisAlignment:
+            maxLines > 1 ? CrossAxisAlignment.start : CrossAxisAlignment.center,
         children: [
           Expanded(
             child: TextField(
@@ -111,15 +120,13 @@ class _TodayScreenState extends State<TodayScreen> {
     );
   }
 
-  DateTime get _today => DateTime.now();
-
   void _savePreWeight() {
     final v = double.tryParse(_preWeight.text);
     if (v == null) return;
     final unit = UnitService.instance.unit.value;
     final kg = toKgFromInput(v, unit);
     context.read<SessionStore>().upsertPartial(Session(
-          date: _today,
+          date: _selectedDate,
           preWeight: kg,
           preWeightAt: DateTime.now(),
         ));
@@ -129,7 +136,7 @@ class _TodayScreenState extends State<TodayScreen> {
     final v = double.tryParse(_preBP.text);
     if (v == null) return;
     context.read<SessionStore>().upsertPartial(Session(
-          date: _today,
+          date: _selectedDate,
           preBP: v,
           preBPAt: DateTime.now(),
         ));
@@ -139,7 +146,7 @@ class _TodayScreenState extends State<TodayScreen> {
     final v = double.tryParse(_postBP.text);
     if (v == null) return;
     context.read<SessionStore>().upsertPartial(Session(
-          date: _today,
+          date: _selectedDate,
           postBP: v,
           postBPAt: DateTime.now(),
         ));
@@ -151,7 +158,7 @@ class _TodayScreenState extends State<TodayScreen> {
     final unit = UnitService.instance.unit.value;
     final kg = toKgFromInput(v, unit);
     context.read<SessionStore>().upsertPartial(Session(
-          date: _today,
+          date: _selectedDate,
           postWeight: kg,
           postWeightAt: DateTime.now(),
         ));
@@ -160,7 +167,7 @@ class _TodayScreenState extends State<TodayScreen> {
   void _saveNotes() {
     final text = _notes.text.trim();
     context.read<SessionStore>().upsertPartial(Session(
-          date: _today,
+          date: _selectedDate,
           notes: text.isEmpty ? null : text,
           notesAt: DateTime.now(),
         ));
@@ -170,27 +177,66 @@ class _TodayScreenState extends State<TodayScreen> {
   Widget build(BuildContext context) {
     final kb = const TextInputType.numberWithOptions(decimal: true);
     final unitLabel = _unit == WeightUnit.kg ? 'KG' : 'LBS';
+    final selectionLabel = DateFormat('EEE, MMM d, y').format(_selectedDate);
+
     return Scaffold(
-      appBar: AppBar(title: const Text("Today's Session")),
+      appBar: AppBar(
+        title: const Text("Today's Session"),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.calendar_month),
+            tooltip: 'Toggle calendar',
+            onPressed: () => _trayKey.currentState?.toggle(),
+          ),
+        ],
+      ),
       body: Column(
         children: [
-          const CalendarHeader(),
+          CalendarTray(
+            key: _trayKey,
+            focusedDate: _selectedDate,
+            onDateSelected: (date) {
+              setState(() {
+                _selectedDate = _normalize(date);
+              });
+            },
+            rangeMode: false,
+            titleWhenCollapsed: selectionLabel,
+            prefsKey: 'ui.tray.today',
+          ),
           Expanded(
             child: ListView(
               children: [
                 _row(
-                    label: 'Pre-Weight ($unitLabel)',
-                    ctrl: _preWeight,
-                    kb: kb,
-                    onSave: _savePreWeight),
-                _row(label: 'Pre BP (systolic)', ctrl: _preBP, kb: kb, onSave: _savePreBP),
-                _row(label: 'Post BP (systolic)', ctrl: _postBP, kb: kb, onSave: _savePostBP),
+                  label: 'Pre-Weight ($unitLabel)',
+                  ctrl: _preWeight,
+                  kb: kb,
+                  onSave: _savePreWeight,
+                ),
                 _row(
-                    label: 'Post-Weight ($unitLabel)',
-                    ctrl: _postWeight,
-                    kb: kb,
-                    onSave: _savePostWeight),
-                _row(label: 'Notes (optional)', ctrl: _notes, onSave: _saveNotes, maxLines: 3),
+                  label: 'Pre BP (systolic)',
+                  ctrl: _preBP,
+                  kb: kb,
+                  onSave: _savePreBP,
+                ),
+                _row(
+                  label: 'Post BP (systolic)',
+                  ctrl: _postBP,
+                  kb: kb,
+                  onSave: _savePostBP,
+                ),
+                _row(
+                  label: 'Post-Weight ($unitLabel)',
+                  ctrl: _postWeight,
+                  kb: kb,
+                  onSave: _savePostWeight,
+                ),
+                _row(
+                  label: 'Notes (optional)',
+                  ctrl: _notes,
+                  onSave: _saveNotes,
+                  maxLines: 3,
+                ),
               ],
             ),
           )
