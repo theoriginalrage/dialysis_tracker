@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
+import 'screens/history_screen.dart';
+import 'screens/profile_settings_screen.dart';
+import 'screens/today_screen.dart';
+import 'screens/trends_screen.dart';
+import 'services/unit_service.dart';
 import 'state/session_store.dart';
 import 'state/settings_store.dart';
-import 'screens/today_screen.dart';
-import 'screens/history_screen.dart';
-import 'screens/trends_screen.dart';
-import 'screens/profile_settings_screen.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await UnitService.instance.load();
+
   runApp(
     MultiProvider(
       providers: [
@@ -26,21 +31,24 @@ class DialysisApp extends StatelessWidget {
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsStore>();
 
-    return MaterialApp(
-      title: 'Dialysis Tracker',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
-        useMaterial3: true,
-      ),
-      darkTheme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.teal,
-          brightness: Brightness.dark,
+    return AnimatedBuilder(
+      animation: UnitService.instance.unit,
+      builder: (_, __) => MaterialApp(
+        title: 'Dialysis Tracker',
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
+          useMaterial3: true,
         ),
-        useMaterial3: true,
+        darkTheme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: Colors.teal,
+            brightness: Brightness.dark,
+          ),
+          useMaterial3: true,
+        ),
+        themeMode: settings.themeMode,
+        home: const _Gate(),
       ),
-      themeMode: settings.themeMode,
-      home: const _Gate(),
     );
   }
 }
