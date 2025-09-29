@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/profile_prefs.dart';
+import '../services/unit_service.dart';
 
 class SettingsStore extends ChangeNotifier {
   bool _loaded = false;
@@ -54,10 +55,21 @@ class SettingsStore extends ChangeNotifier {
       }
     }
 
+    final storedUnit = prefs.getString(kProfileUnitKey);
+    if (storedUnit == null && legacyUnit != null && legacyUnit.isNotEmpty) {
+      final normalized = legacyUnit.toLowerCase() == 'lbs' ? 'lb' : 'kg';
+      final legacyWeightUnit =
+          normalized == 'lb' ? WeightUnit.lb : WeightUnit.kg;
+      await UnitService.instance.set(legacyWeightUnit);
+    } else if (storedUnit == 'lbs') {
+      await prefs.setString(kProfileUnitKey, 'lb');
+    }
+
     _name = prefs.getString(kProfileNameKey) ?? legacyName ?? '';
-    _unit = prefs.getString(kProfileUnitKey) ?? legacyUnit ?? 'kg';
     _startWeight = prefs.getDouble(kProfileStartWeightKey);
     _photoBytes = decodePhotoBase64(prefs.getString(kProfilePhotoBase64Key));
+    _unit =
+        UnitService.instance.unit.value == WeightUnit.kg ? 'kg' : 'lb';
 
     final storedTheme = prefs.getString(kPrefsThemeModeKey);
     _themeMode = parseThemeMode(storedTheme);
@@ -83,7 +95,10 @@ class SettingsStore extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(kProfileNameKey, name);
     await prefs.setDouble(kProfileStartWeightKey, startWeight);
-    await prefs.setString(kProfileUnitKey, unit);
+    final normalizedUnit = unit == 'lb' ? 'lb' : 'kg';
+    await prefs.setString(kProfileUnitKey, normalizedUnit);
+    await UnitService.instance
+        .set(normalizedUnit == 'lb' ? WeightUnit.lb : WeightUnit.kg);
     if (photoBytes != null && photoBytes.isNotEmpty) {
       await prefs.setString(kProfilePhotoBase64Key, base64Encode(photoBytes));
     } else {
@@ -93,7 +108,7 @@ class SettingsStore extends ChangeNotifier {
 
     _name = name;
     _startWeight = startWeight;
-    _unit = unit;
+    _unit = normalizedUnit;
     _photoBytes = photoBytes;
     _onboarded = true;
     _loaded = true;

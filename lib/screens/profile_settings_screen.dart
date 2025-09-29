@@ -5,7 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
+import '../services/unit_service.dart';
 import '../state/settings_store.dart';
+import '../utils/weight_utils.dart';
 
 class ProfileSettingsScreen extends StatefulWidget {
   const ProfileSettingsScreen({super.key, this.isOnboarding = false});
@@ -23,7 +25,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
   final ImagePicker _picker = ImagePicker();
 
   Uint8List? _photoBytes;
-  String _unit = 'kg';
+  WeightUnit _unit = UnitService.instance.unit.value;
   bool _initialized = false;
   bool _submitted = false;
   bool _isSaving = false;
@@ -31,6 +33,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
   @override
   void initState() {
     super.initState();
+    UnitService.instance.unit.addListener(_handleUnitChange);
     _nameController.addListener(_onFieldsChanged);
     _weightController.addListener(_onFieldsChanged);
   }
@@ -39,6 +42,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
   void dispose() {
     _nameController.removeListener(_onFieldsChanged);
     _weightController.removeListener(_onFieldsChanged);
+    UnitService.instance.unit.removeListener(_handleUnitChange);
     _nameController.dispose();
     _weightController.dispose();
     super.dispose();
@@ -54,34 +58,48 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (_initialized) return;
+    _unit = UnitService.instance.unit.value;
     final settings = context.read<SettingsStore>();
     _nameController.text = settings.name;
     final weight = settings.startWeight;
     if (weight != null) {
-      _weightController.text = _formatWeight(weight);
+      _weightController.text =
+          toDisplayFromKg(weight, _unit).toStringAsFixed(1);
     }
-    _unit = settings.unit;
     _photoBytes = settings.photoBytes;
     _initialized = true;
   }
 
-  String _formatWeight(double value) {
-    if (value % 1 == 0) {
-      return value.toStringAsFixed(0);
-    }
-    return value.toString();
+  void _handleUnitChange() {
+    if (!mounted) return;
+    final nextUnit = UnitService.instance.unit.value;
+    if (_unit == nextUnit) return;
+    final previousUnit = _unit;
+    final kg = _parsedWeight(previousUnit);
+    setState(() {
+      _unit = nextUnit;
+      if (kg != null) {
+        final display = toDisplayFromKg(kg, _unit).toStringAsFixed(1);
+        _weightController.value = TextEditingValue(
+          text: display,
+          selection: TextSelection.collapsed(offset: display.length),
+        );
+      }
+    });
   }
 
-  double? get _parsedWeight {
+  double? _parsedWeight(WeightUnit unit) {
     final raw = _weightController.text.trim();
     if (raw.isEmpty) return null;
-    return double.tryParse(raw);
+    final parsed = double.tryParse(raw);
+    if (parsed == null) return null;
+    return toKgFromInput(parsed, unit);
   }
 
   bool get _canSave {
     if (_isSaving) return false;
     final name = _nameController.text.trim();
-    final weight = _parsedWeight;
+    final weight = _parsedWeight(_unit);
     if (name.isEmpty || weight == null) {
       return false;
     }
@@ -122,7 +140,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
     if (!_formKey.currentState!.validate()) {
       return;
     }
-    final weight = _parsedWeight;
+    final weight = _parsedWeight(_unit);
     if (weight == null || weight <= 0) {
       return;
     }
@@ -134,7 +152,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
       await store.saveProfile(
         name: _nameController.text.trim(),
         startWeight: weight,
-        unit: _unit,
+        unit: _unit == WeightUnit.kg ? 'kg' : 'lb',
         photoBytes: _photoBytes,
       );
       if (!mounted) return;
@@ -229,10 +247,12 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
             TextFormField(
               controller: _weightController,
               decoration: InputDecoration(
-                labelText: 'Starting Weight (${_unit.toUpperCase()})',
+                labelText:
+                    'Starting Weight (${_unit == WeightUnit.kg ? 'KG' : 'LBS'})',
                 border: const OutlineInputBorder(),
               ),
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
               validator: (value) {
                 final trimmed = value?.trim() ?? '';
                 if (trimmed.isEmpty) {
@@ -242,7 +262,8 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                 if (parsed == null) {
                   return 'Enter a valid number';
                 }
-                if (parsed <= 0) {
+                final kgValue = toKgFromInput(parsed, _unit);
+                if (kgValue <= 0) {
                   return 'Weight must be greater than zero';
                 }
                 return null;
@@ -253,17 +274,16 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
-              children: ['kg', 'lbs'].map((unit) {
+              children: WeightUnit.values.map((unit) {
+                final label = unit == WeightUnit.kg ? 'KG' : 'LBS';
                 return ChoiceChip(
-                  label: Text(unit.toUpperCase()),
+                  label: Text(label),
                   selected: _unit == unit,
                   onSelected: _isSaving
                       ? null
                       : (selected) {
                           if (selected) {
-                            setState(() {
-                              _unit = unit;
-                            });
+                            UnitService.instance.set(unit);
                           }
                         },
                 );

@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 
+import '../services/unit_service.dart';
 import '../state/session_store.dart';
+import '../utils/weight_utils.dart';
 import 'widgets/calendar_header.dart';
 
 class TrendsScreen extends StatelessWidget {
@@ -13,12 +15,15 @@ class TrendsScreen extends StatelessWidget {
     final store = context.watch<SessionStore>();
     final sessions = store.sessions;
 
-    List<FlSpot> _spotsPreWeight() {
+    List<FlSpot> _spotsPreWeight(WeightUnit unit) {
       final data = sessions.where((s) => s.preWeight != null).toList();
       return List.generate(
         data.length,
-        (i) =>
-            FlSpot((data.length - i).toDouble(), data[i].preWeight!),
+        (i) {
+          final weightKg = data[i].preWeight!;
+          final display = toDisplayFromKg(weightKg, unit);
+          return FlSpot((data.length - i).toDouble(), display);
+        },
       );
     }
 
@@ -30,7 +35,7 @@ class TrendsScreen extends StatelessWidget {
       );
     }
 
-    Widget _chart(String title, List<FlSpot> spots) {
+    Widget _chart(String title, List<FlSpot> spots, {String? axisLabel}) {
       if (spots.isEmpty) {
         return Container(
           height: 220,
@@ -48,7 +53,20 @@ class TrendsScreen extends StatelessWidget {
             child: LineChart(
               LineChartData(
                 gridData: const FlGridData(show: true),
-                titlesData: const FlTitlesData(show: false),
+                titlesData: FlTitlesData(
+                  leftTitles: AxisTitles(
+                    axisNameWidget:
+                        axisLabel != null ? Text(axisLabel) : const SizedBox(),
+                    axisNameSize: axisLabel != null ? 24 : 0,
+                    sideTitles: const SideTitles(showTitles: false),
+                  ),
+                  rightTitles:
+                      const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  topTitles:
+                      const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  bottomTitles:
+                      const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                ),
                 borderData: FlBorderData(show: true),
                 lineBarsData: [
                   LineChartBarData(
@@ -72,17 +90,26 @@ class TrendsScreen extends StatelessWidget {
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(16),
-              child: ListView(
-                children: [
-                  _chart('Pre-Weight Trend', _spotsPreWeight()),
-                  const SizedBox(height: 16),
-                  Text(
-                      'Average Pre-Weight: ${store.avgPreWeight.toStringAsFixed(1)} kg'),
-                  const SizedBox(height: 24),
-                  _chart('BP Trend (systolic)', _spotsBP()),
-                  const SizedBox(height: 8),
-                  Text('Average BP: ${store.avgBP.toStringAsFixed(0)}'),
-                ],
+              child: ValueListenableBuilder<WeightUnit>(
+                valueListenable: UnitService.instance.unit,
+                builder: (_, unit, __) {
+                  final preWeightSpots = _spotsPreWeight(unit);
+                  final avgPreWeight =
+                      formatWeight(store.avgPreWeight, unit, decimals: 1);
+                  return ListView(
+                    children: [
+                      _chart('Pre-Weight Trend', preWeightSpots,
+                          axisLabel: unit == WeightUnit.kg ? 'kg' : 'lbs'),
+                      const SizedBox(height: 16),
+                      Text('Average Pre-Weight: $avgPreWeight'),
+                      const SizedBox(height: 24),
+                      _chart('BP Trend (systolic)', _spotsBP(),
+                          axisLabel: 'mmHg'),
+                      const SizedBox(height: 8),
+                      Text('Average BP: ${store.avgBP.toStringAsFixed(0)}'),
+                    ],
+                  );
+                },
               ),
             ),
           ),

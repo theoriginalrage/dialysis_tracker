@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../state/session_store.dart';
 import '../models/session.dart';
+import '../services/unit_service.dart';
+import '../state/session_store.dart';
+import '../utils/weight_utils.dart';
 import 'widgets/calendar_header.dart';
 
 class HistoryScreen extends StatelessWidget {
@@ -52,53 +54,65 @@ class _SessionTileState extends State<_SessionTile> {
   @override
   Widget build(BuildContext context) {
     final s = widget.s;
-    final fluid = s.fluidRemoved != null
-        ? s.fluidRemoved!.toStringAsFixed(2)
-        : '—';
     final d = '${s.date.year}-${s.date.month.toString().padLeft(2, '0')}-'
         '${s.date.day.toString().padLeft(2, '0')}';
 
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      child: InkWell(
-        onTap: () => setState(() => _open = !_open),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+    return ValueListenableBuilder<WeightUnit>(
+      valueListenable: UnitService.instance.unit,
+      builder: (_, unit, __) {
+        final fluid = s.fluidRemoved;
+        final fluidText =
+            fluid != null ? formatWeight(fluid, unit) : '—';
+        final preText =
+            s.preWeight != null ? formatWeight(s.preWeight!, unit) : '—';
+        final postText =
+            s.postWeight != null ? formatWeight(s.postWeight!, unit) : '—';
+
+        return Card(
+          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          child: InkWell(
+            onTap: () => setState(() => _open = !_open),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.circle, size: 12, color: widget.colorOf(s.status)),
-                  const SizedBox(width: 8),
-                  Text(d, style: const TextStyle(fontWeight: FontWeight.bold)),
-                  const Spacer(),
-                  Text('∆Wt: $fluid kg'),
-                ],
-              ),
-              if (_open) const SizedBox(height: 8),
-              if (_open)
-                DefaultTextStyle(
-                  style: Theme.of(context).textTheme.bodyMedium!,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  Row(
                     children: [
-                      Text('Pre-Weight: ${s.preWeight ?? '—'} kg'),
-                      Text('Post-Weight: ${s.postWeight ?? '—'} kg'),
-                      Text('Pre BP: ${s.preBP ?? '—'}'),
-                      Text('Post BP: ${s.postBP ?? '—'}'),
-                      if (s.notes != null && s.notes!.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 6),
-                          child: Text('Notes: ${s.notes}'),
-                        ),
+                      Icon(Icons.circle,
+                          size: 12, color: widget.colorOf(s.status)),
+                      const SizedBox(width: 8),
+                      Text(d,
+                          style: const TextStyle(fontWeight: FontWeight.bold)),
+                      const Spacer(),
+                      Text(fluidText == '—' ? '∆Wt: —' : '∆Wt: $fluidText'),
                     ],
                   ),
-                ),
-            ],
+                  if (_open) const SizedBox(height: 8),
+                  if (_open)
+                    DefaultTextStyle(
+                      style: Theme.of(context).textTheme.bodyMedium!,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Pre-Weight: $preText'),
+                          Text('Post-Weight: $postText'),
+                          Text('Pre BP: ${s.preBP ?? '—'}'),
+                          Text('Post BP: ${s.postBP ?? '—'}'),
+                          if (s.notes != null && s.notes!.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 6),
+                              child: Text('Notes: ${s.notes}'),
+                            ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
