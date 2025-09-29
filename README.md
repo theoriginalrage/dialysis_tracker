@@ -14,3 +14,5 @@ A few resources to get you started if this is your first Flutter project:
 For help getting started with Flutter development, view the
 [online documentation](https://docs.flutter.dev/), which offers tutorials,
 samples, guidance on mobile development, and a full API reference.
+
+Updated 9/29/25 - Android: Impeller disabled via manifest to avoid Vulkan crash on some Adreno devices (S9+). Use flutter run --enable-impeller to test on newer phones.”
