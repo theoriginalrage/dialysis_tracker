@@ -1,7 +1,7 @@
 name: dialysis_tracker
 description: "An easy to use tracker for dialysis patients."
 publish_to: 'none'
-version: 1.1.0+5
+version: 1.1.1+1
 
 environment:
   sdk: ^3.9.0
