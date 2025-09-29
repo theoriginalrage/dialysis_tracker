@@ -17,7 +17,7 @@ class _CalendarHeaderState extends State<CalendarHeader> {
   @override
   Widget build(BuildContext context) {
     final sessions = context.watch<SessionStore>().sessions;
-    final profile = context.watch<SettingsStore>().profile;
+    final dialysisDays = context.watch<SettingsStore>().dialysisWeekdays;
 
     // Sessions per day
     final Map<DateTime, int> sessionCount = {};
@@ -26,8 +26,7 @@ class _CalendarHeaderState extends State<CalendarHeader> {
       sessionCount[d] = (sessionCount[d] ?? 0) + 1;
     }
 
-    bool isDialysisWeekday(DateTime d) =>
-        profile?.dialysisWeekdays.contains(d.weekday) ?? false;
+    bool isDialysisWeekday(DateTime d) => dialysisDays.contains(d.weekday);
 
     return TableCalendar(
       firstDay: DateTime.utc(2022, 1, 1),

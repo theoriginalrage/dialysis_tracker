@@ -5,8 +5,7 @@ import 'state/settings_store.dart';
 import 'screens/today_screen.dart';
 import 'screens/history_screen.dart';
 import 'screens/trends_screen.dart';
-import 'screens/setup_screen.dart';
-import 'screens/settings_screen.dart';
+import 'screens/profile_settings_screen.dart';
 
 void main() {
   runApp(
@@ -40,7 +39,7 @@ class DialysisApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      themeMode: settings.darkMode ? ThemeMode.dark : ThemeMode.light,
+      themeMode: settings.themeMode,
       home: const _Gate(),
     );
   }
@@ -61,7 +60,9 @@ class _Gate extends StatelessWidget {
     }
 
     // After load: either show setup or main tabs
-    return settings.onboarded ? const _Root() : const SetupScreen();
+    return settings.onboarded
+        ? const _Root()
+        : const ProfileSettingsScreen(isOnboarding: true);
   }
 }
 
@@ -78,7 +79,7 @@ class _RootState extends State<_Root> {
     TodayScreen(),
     HistoryScreen(),
     TrendsScreen(),
-    SettingsScreen(),
+    ProfileSettingsScreen(),
   ];
 
   @override
