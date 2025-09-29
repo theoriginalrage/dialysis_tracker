@@ -16,7 +16,7 @@
     <!-- Declare that you can use a camera, but don't require it -->
     <uses-feature android:name="android.hardware.camera.any" android:required="false" />
 
-    <!-- Single consolidated queries block -->
+    <!-- Consolidated queries -->
     <queries>
         <intent>
             <action android:name="android.media.action.IMAGE_CAPTURE" />
@@ -36,6 +36,11 @@
         android:label="@string/app_name"
         android:icon="@mipmap/ic_launcher"
         android:hardwareAccelerated="true">
+
+        <!-- Disable Impeller on Android to avoid Vulkan driver crashes on some devices -->
+        <meta-data
+            android:name="io.flutter.embedding.android.EnableImpeller"
+            android:value="false" />
 
         <activity
             android:name=".MainActivity"
